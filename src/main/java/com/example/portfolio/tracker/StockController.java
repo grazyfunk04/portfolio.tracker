@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @RestController
 @RequestMapping("/api/stocks")
 
@@ -23,34 +25,50 @@ public class StockController {
     private StockService stockService;
 
     @GetMapping
-    public ResponseEntity<List<Stock>> getAllStocks() {
-        return new ResponseEntity<>(stockService.getAllStocks(), HttpStatus.OK);
+    public ResponseEntity<List<Stock>> getAllStocks(HttpServletRequest request) {
+        String userId = getUserIdFromRequest(request);
+        return new ResponseEntity<>(stockService.getStocksForUser(userId), HttpStatus.OK);
     }
 
     @PostMapping
-    public ResponseEntity<Stock> addStock(@Validated @RequestBody Stock stock) {
-        return new ResponseEntity<>(stockService.addStock(stock), HttpStatus.CREATED);
+    public ResponseEntity<Stock> addStock(@Validated @RequestBody Stock stock, HttpServletRequest request) {
+        String userId = getUserIdFromRequest(request);
+        return new ResponseEntity<>(stockService.addStock(userId, stock), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Stock> updateStock(@PathVariable String id, @Validated @RequestBody Stock stock) {
-        return new ResponseEntity<>(stockService.updateStock(id, stock), HttpStatus.OK);
+    public ResponseEntity<Stock> updateStock(@PathVariable String id, @Validated @RequestBody Stock stock, HttpServletRequest request) {
+        String userId = getUserIdFromRequest(request);
+        return new ResponseEntity<>(stockService.updateStock(userId, id, stock), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteStock(@PathVariable String id) {
-        stockService.deleteStock(id);
+    public ResponseEntity<Void> deleteStock(@PathVariable String id, HttpServletRequest request) {
+        String userId = getUserIdFromRequest(request);
+        stockService.deleteStock(userId, id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/portfolio-value")
-    public ResponseEntity<Double> getTotalPortfolioValue() {
-        return new ResponseEntity<>(stockService.calculateTotalPortfolioValue(), HttpStatus.OK);
+    public ResponseEntity<Double> getTotalPortfolioValue(HttpServletRequest request) {
+        String userId = getUserIdFromRequest(request);
+        return new ResponseEntity<>(stockService.calculateTotalPortfolioValue(userId), HttpStatus.OK);
     }
 
     @GetMapping("/dashboard")
-    public ResponseEntity<PortfolioMetrics> getPortfolioDashboard() {
-        PortfolioMetrics metrics = stockService.getPortfolioMetrics();
+    public ResponseEntity<PortfolioMetrics> getPortfolioDashboard(HttpServletRequest request) {
+        String userId = getUserIdFromRequest(request);
+        PortfolioMetrics metrics = stockService.getPortfolioMetrics(userId);
         return new ResponseEntity<>(metrics, HttpStatus.OK);
     }
+
+    private String getUserIdFromRequest(HttpServletRequest request) {
+        String userId = request.getHeader("X-User-Id");
+        if (userId == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+        return userId;
+    }
+    
+    
 }

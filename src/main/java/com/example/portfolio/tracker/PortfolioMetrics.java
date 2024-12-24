@@ -3,11 +3,20 @@ package com.example.portfolio.tracker;
 import java.util.Map;
 
 public class PortfolioMetrics {
+    private String userId;
     private double totalValue;
     private Stock topPerformingStock;
     private Map<String, Double> portfolioDistribution;
 
     // Getters and Setters
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
     public double getTotalValue() {
         return totalValue;
     }
@@ -32,4 +41,3 @@ public class PortfolioMetrics {
         this.portfolioDistribution = portfolioDistribution;
     }
 }
-

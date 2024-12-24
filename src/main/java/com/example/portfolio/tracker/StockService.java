@@ -13,28 +13,53 @@ public class StockService {
     @Autowired
     private StockRepository stockRepository;
 
-    public List<Stock> getAllStocks() {
-        return stockRepository.findAll();
+    @Autowired
+    private UserRepository userRepository;
+
+    public List<Stock> getStocksForUser(String userId) {
+        return stockRepository.findByUserId(userId);
     }
 
-    public Stock addStock(Stock stock) {
+    public Stock addStock(String userId, Stock stock) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        stock.setUser(user);
         return stockRepository.save(stock);
     }
 
-    public Stock updateStock(String id, Stock stock) {
-        stock.setId(id);
-        return stockRepository.save(stock);
+    public Stock updateStock(String userId, String stockId, Stock stock) {
+        Stock existingStock = stockRepository.findById(stockId).orElseThrow(() -> new RuntimeException("Stock not found"));
+        if (!existingStock.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized access to stock");
+        }
+        existingStock.setName(stock.getName());
+        existingStock.setQuantity(stock.getQuantity());
+        return stockRepository.save(existingStock);
     }
 
-    public void deleteStock(String id) {
-        stockRepository.deleteById(id);
+    public void deleteStock(String userId, String stockId) {
+        Stock existingStock = stockRepository.findById(stockId).orElseThrow(() -> new RuntimeException("Stock not found"));
+        if (!existingStock.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized access to stock");
+        }
+        stockRepository.delete(existingStock);
     }
 
-    public double calculateTotalPortfolioValue() {
-        return stockRepository.findAll().stream()
-                .mapToDouble(stock -> stock.getQuantity() * stock.getBuyPrice())
-                .sum();
+    public double calculateTotalPortfolioValue(String userId) {
+    List<Stock> stocks = getStocksForUser(userId);
+    double totalValue = 0;
+
+    for (Stock stock : stocks) {
+        double stockPrice;
+        try {
+            stockPrice = fetchStockPrice(stock.getTicker());
+        } catch (Exception e) {
+            stockPrice = stock.getBuyPrice();
+        }
+        totalValue += stock.getQuantity() * stockPrice;
     }
+    return totalValue;
+}
+
 
     public double fetchStockPrice(String ticker) {
         String apiUrl = "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + ticker + "&apikey=YOUR_API_KEY";
@@ -45,8 +70,8 @@ public class StockService {
         return Double.parseDouble(quote.get("05. price"));
     }
 
-    public PortfolioMetrics getPortfolioMetrics() {
-        List<Stock> stocks = stockRepository.findAll();
+    public PortfolioMetrics getPortfolioMetrics(String userId) {
+        List<Stock> stocks = getStocksForUser(userId);
         double totalValue = 0;
         Stock topPerformingStock = null;
         Map<String, Double> distribution = new HashMap<>();
@@ -55,12 +80,10 @@ public class StockService {
             double stockValue = stock.getQuantity() * stock.getBuyPrice();
             totalValue += stockValue;
 
-            // Calculate top-performing stock based on some criteria (e.g., percentage increase)
             if (topPerformingStock == null || stockValue > (topPerformingStock.getQuantity() * topPerformingStock.getBuyPrice())) {
                 topPerformingStock = stock;
             }
 
-            
             distribution.put(stock.getTicker(), stockValue);
         }
 
@@ -69,7 +92,6 @@ public class StockService {
             distribution.put(ticker, value / totalValue * 100);
         }
 
-       
         PortfolioMetrics metrics = new PortfolioMetrics();
         metrics.setTotalValue(totalValue);
         metrics.setTopPerformingStock(topPerformingStock);
@@ -77,5 +99,4 @@ public class StockService {
 
         return metrics;
     }
-
 }

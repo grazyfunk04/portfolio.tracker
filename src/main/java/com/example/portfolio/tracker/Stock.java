@@ -1,6 +1,7 @@
 package com.example.portfolio.tracker;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import jakarta.validation.constraints.NotBlank;
@@ -23,6 +24,9 @@ public class Stock {
 
     @Positive
     private double buyPrice;
+
+    @DBRef
+    private User user;
 
     // Getters and Setters
     public String getId() {
@@ -63,5 +67,13 @@ public class Stock {
 
     public void setBuyPrice(double buyPrice) {
         this.buyPrice = buyPrice;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }
